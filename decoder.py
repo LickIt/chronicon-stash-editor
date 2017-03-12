@@ -1,6 +1,5 @@
 import codecs
 import struct
-import json
 
 
 class Stat(object):
@@ -49,8 +48,13 @@ class Stat(object):
 
         return "{}:{}:{}".format(self._type, name, value).upper()
 
-    def to_tuple(self):
-        return (self.name, self.value)
+    def set_value(self, value):
+        if not value:
+            self.value = None
+        elif self._type == "1":
+            self.value = float(value)
+        else:
+            self.value = value
 
 
 class Item(object):
@@ -71,11 +75,9 @@ class Item(object):
         stats = ",".join([s.write() for s in self.stats])
         return bytes(stats, Stash.encoding)
 
-    def to_dict(self):
+    def get_name(self):
         name = [s.value for s in self.stats if s.name == "name"]
-        stats = [s.to_tuple()
-                 for s in self.stats if s.value and s.name != "name"]
-        return {"name": name[0] if name else None, "stats": dict(stats)}
+        return name[0] if name else None
 
 
 class Stash(object):
@@ -153,14 +155,3 @@ class Stash(object):
             binary += 12 * b"\x00"
 
         return codecs.encode(binary, "hex").decode(Stash.encoding).upper()
-
-    def to_dict(self):
-        return {"size": self.size, "items": [i.to_dict() for i in self.items[:self.size]]}
-
-
-if __name__ == "__main__":
-    stash = Stash("player.stash")
-    #print(json.dumps(stash.to_dict(), indent=3))
-    [s for s in stash.items[0].stats if s.name == "dmg"][0].value = 200000.0
-    with open("modified.stash", "w") as f:
-        f.write(stash.write())
